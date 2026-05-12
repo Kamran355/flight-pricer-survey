@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flight Pricing Study</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --sky:      #0b1d35;
+    --horizon:  #1a3a5c;
+    --cloud:    #e8edf4;
+    --paper:    #f5f3ee;
+    --ink:      #1a1a2e;
+    --ink-soft: #4a4a6a;
+    --accent:   #c8860a;
+    --accent-lt:#f0c040;
+    --success:  #2a7d4f;
+    --danger:   #c0392b;
+    --border:   #d4cfc5;
+    --card-bg:  #ffffff;
+    --mono:     'DM Mono', monospace;
+    --serif:    'DM Serif Display', serif;
+    --sans:     'DM Sans', sans-serif;
+    --radius:   6px;
+    --shadow:   0 2px 16px rgba(11,29,53,0.10);
+    --shadow-lg:0 8px 40px rgba(11,29,53,0.16);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Sky header strip ─────────────────────────────────────── */
+  .sky-strip {
+    background: linear-gradient(160deg, var(--sky) 0%, var(--horizon) 100%);
+    padding: 52px 24px 48px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .sky-strip::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 1;
+  }
+  .sky-strip h1 {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    color: #fff;
+    letter-spacing: -0.01em;
+    position: relative;
+  }
+  .sky-strip h1 em {
+    font-style: italic;
+    color: var(--accent-lt);
+  }
+  .sky-strip p {
+    color: rgba(255,255,255,0.72);
+    font-size: 0.95rem;
+    margin-top: 10px;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+    position: relative;
+  }
+  .plane-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.9;
+    position: relative;
+  }
+
+  /* ── Progress bar ─────────────────────────────────────────── */
+  .progress-wrap {
+    background: var(--horizon);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .progress-inner {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent-lt);
+    border-radius: 2px;
+    transition: width 0.5s cubic-bezier(.4,0,.2,1);
+    width: 0%;
+  }
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.55);
+    white-space: nowrap;
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* ── Main content wrapper ─────────────────────────────────── */
+  .content {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+  }
+
+  /* ── Screens ──────────────────────────────────────────────── */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── Intro screen ─────────────────────────────────────────── */
+  .intro-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 36px 40px;
+    margin-top: 36px;
+    box-shadow: var(--shadow);
+  }
+  .intro-card h2 {
+    font-family: var(--serif);
+    font-size: 1.55rem;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+  .intro-card p {
+    color: var(--ink-soft);
+    font-size: 0.94rem;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .info-pill {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+  .info-pill strong {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  /* ── Scenario card ────────────────────────────────────────── */
+  .scenario-header {
+    margin-top: 36px;
+    margin-bottom: 24px;
+  }
+  .scenario-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sky);
+    color: rgba(255,255,255,0.85);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    padding: 5px 12px;
+    border-radius: 2px;
+    margin-bottom: 14px;
+  }
+  .scenario-title {
+    font-family: var(--serif);
+    font-size: 1.45rem;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .scenario-subtitle {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+
+  /* ── Cost breakdown panel ─────────────────────────────────── */
+  .cost-panel {
+    background: var(--sky);
+    border-radius: var(--radius);
+    padding: 22px 26px;
+    margin-bottom: 26px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cost-panel::after {
+    content: '✈';
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 3.5rem;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+  .cost-panel h3 {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 14px;
+  }
+  .cost-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    font-size: 0.88rem;
+  }
+  .cost-row:last-of-type { border-bottom: none; }
+  .cost-row .label { color: rgba(255,255,255,0.62); }
+  .cost-row .value { font-family: var(--mono); color: #fff; }
+  .cost-total {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.18);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .cost-total .label {
+    color: rgba(255,255,255,0.85);
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
+  .cost-total .value {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--accent-lt);
+    font-weight: 500;
+  }
+
+  /* ── Context tags ─────────────────────────────────────────── */
+  .context-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 26px;
+  }
+  .tag {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    font-family: var(--mono);
+  }
+  .tag strong { color: var(--ink); }
+
+  /* ── Question block ───────────────────────────────────────── */
+  .question-block {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s;
+  }
+  .question-block:focus-within {
+    border-color: var(--accent);
+  }
+  .q-number {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .q-text {
+    font-size: 0.96rem;
+    color: var(--ink);
+    line-height: 1.55;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .q-hint {
+    font-size: 0.80rem;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+
+  /* ── Radio options ────────────────────────────────────────── */
+  .radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .radio-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 0.90rem;
+    color: var(--ink-soft);
+  }
+  .radio-option:hover {
+    background: var(--paper);
+    border-color: var(--accent);
+    color: var(--ink);
+  }
+  .radio-option input[type="radio"] { display: none; }
+  .radio-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+  }
+  .radio-option input[type="radio"]:checked + .radio-dot {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  .radio-option input[type="radio"]:checked + .radio-dot::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .radio-option.selected {
+    background: #fef9ee;
+    border-color: var(--accent);
+    color: var(--ink);
+  }
+
+  /* ── Slider ───────────────────────────────────────────────── */
+  .slider-wrap { margin-top: 8px; }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 1px 6px rgba(200,134,10,0.35);
+    transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  .slider-value {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    color: var(--ink);
+    font-weight: 500;
+    min-width: 70px;
+    text-align: right;
+  }
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.73rem;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+
+  /* ── Text input ───────────────────────────────────────────── */
+  input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--mono);
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--paper);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus, input[type="text"]:focus {
+    border-color: var(--accent);
+    background: #fff;
+  }
+  .input-prefix {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--paper);
+    transition: border-color 0.15s;
+  }
+  .input-prefix:focus-within { border-color: var(--accent); background: #fff; }
+  .prefix-sym {
+    padding: 11px 14px;
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    border-right: 1px solid var(--border);
+    user-select: none;
+  }
+  .input-prefix input {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    flex: 1;
+  }
+  .input-prefix input:focus { background: transparent; }
+
+  /* ── Validation ───────────────────────────────────────────── */
+  .val-error {
+    font-size: 0.78rem;
+    color: var(--danger);
+    margin-top: 6px;
+    display: none;
+  }
+  .val-error.visible { display: block; }
+
+  /* ── Navigation buttons ───────────────────────────────────── */
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 28px;
+    gap: 12px;
+  }
+  .btn {
+    font-family: var(--sans);
+    font-size: 0.90rem;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    letter-spacing: 0.02em;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(200,134,10,0.30);
+  }
+  .btn-primary:hover { background: #b57800; box-shadow: 0 4px 18px rgba(200,134,10,0.38); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--paper); color: var(--ink); }
+  .btn-sky {
+    background: var(--sky);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(11,29,53,0.20);
+  }
+  .btn-sky:hover { background: var(--horizon); }
+  .btn-success {
+    background: var(--success);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(42,125,79,0.25);
+  }
+
+  /* ── Thank you screen ─────────────────────────────────────── */
+  .thankyou-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 44px 40px;
+    margin-top: 40px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+  }
+  .ty-icon { font-size: 3rem; margin-bottom: 16px; }
+  .thankyou-card h2 {
+    font-family: var(--serif);
+    font-size: 1.7rem;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+  .thankyou-card p {
+    color: var(--ink-soft);
+    font-size: 0.93rem;
+    line-height: 1.7;
+    max-width: 440px;
+    margin: 0 auto 20px;
+  }
+  .coeff-preview {
+    background: var(--sky);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+    text-align: left;
+  }
+  .coeff-preview h4 {
+    font-family: var(--mono);
+    font-size: 0.70rem;
+    letter-spacing: 0.10em;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .coeff-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 0.84rem;
+  }
+  .coeff-row .name { color: rgba(255,255,255,0.65); font-family: var(--mono); }
+  .coeff-row .val  { color: var(--accent-lt); font-family: var(--mono); }
+
+  /* ── Responsive ───────────────────────────────────────────── */
+  @media (max-width: 540px) {
+    .intro-card, .thankyou-card { padding: 24px 20px; }
+    .info-grid { grid-template-columns: 1fr; }
+    .cost-panel { padding: 18px 20px; }
+    .question-block { padding: 20px 18px; }
+  }
+
+  /* ── Animations ───────────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .screen.active { animation: fadeUp 0.35s ease both; }
+  .question-block { animation: fadeUp 0.3s ease both; }
+  .question-block:nth-child(2) { animation-delay: 0.05s; }
+  .question-block:nth-child(3) { animation-delay: 0.10s; }
+  .question-block:nth-child(4) { animation-delay: 0.15s; }
+  .question-block:nth-child(5) { animation-delay: 0.20s; }
+</style>
+</head>
+<body>
+
+<!-- Sky Header -->
+<div class="sky-strip">
+  <span class="plane-icon">✈</span>
+  <h1>Flight Pricing <em>Study</em></h1>
+  <p>A personal passion project combining Industrial Engineering and aviation. Your responses help calibrate a real pricing model.</p>
+</div>
+
+<!-- Progress bar -->
+<div class="progress-wrap">
+  <div class="progress-inner">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">Getting started</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 0 — INTRO
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="screen active" id="screen-intro">
+    <div class="intro-card">
+      <h2>Welcome — and thank you for taking the time!</h2>
+      <p>My name is <strong>Kamran</strong>, and I am working on a personal passion project that combines topics I enjoyed in four of my Industrial Engineering courses with my love of aviation.</p>
+      <p>The project is a <strong>data-driven dynamic pricing system</strong> that calculates per-seat costs on personal charter flights — accounting for aircraft operating costs, fuel optimization, and passenger demand — using logistic regression, constrained optimization, and reinforcement learning.</p>
+      <p>To calibrate the model's predictions, I need real responses from real people like you. You'll work through <strong>4 short flight scenarios</strong>. For each one, you'll see the full operating costs and be asked 5 quick questions about what you'd pay or consider fair. <strong>The scenarios you are presented will adapt based on how you answer previous ones.</strong></p>
+      <p>There are no right or wrong answers — your gut reactions are exactly what the model needs. Just go with whatever feels natural to you.</p>
+
+      <div class="info-grid">
+        <div class="info-pill"><strong>Time</strong>5–8 minutes</div>
+        <div class="info-pill"><strong>Scenarios</strong>4 flights</div>
+        <div class="info-pill"><strong>Questions each</strong>5 questions</div>
+        <div class="info-pill"><strong>Your data</strong>Anonymous JSON export</div>
+      </div>
+
+      <p style="font-size:0.82rem; color:var(--ink-soft);">At the end, you'll download a small JSON file and send it to me directly. No account, no sign-up needed.</p>
+    </div>
+
+    <div class="nav-row" style="justify-content:flex-end;">
+      <button class="btn btn-sky" onclick="startSurvey()">Begin scenarios &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 1–4 — SCENARIOS (generated by JS)
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-scenario"></div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCREEN 5 — THANK YOU
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-thankyou">
+    <div class="thankyou-card">
+      <div class="ty-icon">🛬</div>
+      <h2>Thank you for your responses</h2>
+      <p>Your answers will be used to calibrate the pricing model's logistic regression coefficients, making future price estimates more accurate and realistic.</p>
+      <p>Click the button below to download your response file and send it to the researcher.</p>
+
+      <div class="coeff-preview">
+        <h4>Derived coefficient signals from your responses</h4>
+        <div id="coeffPreview"></div>
+      </div>
+
+      <button class="btn btn-success" style="margin-top:8px;" onclick="downloadJSON()">⬇ Download my response file</button>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// DATA — Scenario definitions
+// Each scenario has: title, subtitle, context tags, cost breakdown, and questions.
+// Scenarios 3 & 4 are dynamically adjusted based on early responses.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const BASE_SCENARIOS = [
+  {
+    // Scenario 1: Cost-recovery only — no profit, Q3 and Q5 reference exact cost
+    id: 1,
+    title: "Chicago to Indianapolis",
+    subtitle: "A Saturday afternoon leisure trip — 3 passengers, clear skies, booked two weeks in advance.",
+    tags: { Distance: "140 nm", Duration: "1.1 hrs", Passengers: "3", Departure: "Sat 2:00 PM", Type: "One-way" },
+    costs: {
+      rows: [
+        { label: "Aircraft (0.88 tach hrs × $115)", value: "$101.20" },
+        { label: "Fuel — 23.1 gal at $6.50/gal",   value: "$150.15" },
+        { label: "Reserve fuel (45 min VFR)",        value: "$54.60"  },
+      ],
+      total: "$305.95",
+      perSeat: "$102",
+      perSeatNum: 102,
+      pricingMode: "cost_recovery",   // questions reference exact cost
+      modelPrice: null,
+      modelPriceNum: null,
+    },
+    params: { price: 102, flight_hrs: 1.1, lead_days: 14, num_pax: 3, is_round_trip: 0 }
+  },
+  {
+    // Scenario 2: Model-generated price — solo passenger, short notice, longer flight
+    id: 2,
+    title: "St. Louis to Nashville",
+    subtitle: "A midweek solo trip booked just 2 days out. You're the only passenger.",
+    tags: { Distance: "260 nm", Duration: "2.0 hrs", Passengers: "1", Departure: "Wed 7:30 AM", Type: "One-way" },
+    costs: {
+      rows: [
+        { label: "Aircraft (1.60 tach hrs × $115)", value: "$184.00" },
+        { label: "Fuel — 33.0 gal at $6.80/gal",   value: "$224.40" },
+        { label: "Reserve fuel (45 min VFR)",        value: "$61.20"  },
+      ],
+      total: "$469.60",
+      perSeat: "$470",
+      perSeatNum: 470,
+      pricingMode: "model_price",     // questions reference model-suggested price
+      modelPrice: "$565",             // model adds ~20% for short lead + solo seat
+      modelPriceNum: 565,
+    },
+    params: { price: 565, flight_hrs: 2.0, lead_days: 2, num_pax: 1, is_round_trip: 0 }
+  },
+  {
+    // Scenario 3: Model-generated price — round trip, moderate group, weekend
+    id: 3,
+    title: "Columbus to Pittsburgh — Round Trip",
+    subtitle: "A weekend getaway for two, departing Friday evening and returning Sunday.",
+    tags: { Distance: "145 nm each way", Duration: "1.2 hrs each leg", Passengers: "2", Departure: "Fri 5:00 PM", Type: "Round-trip" },
+    costs: {
+      rows: [
+        { label: "Aircraft (1.92 tach hrs × $115)", value: "$220.80" },
+        { label: "Fuel — 43.2 gal at $6.60/gal",   value: "$285.12" },
+        { label: "Reserve fuel (both legs)",         value: "$108.90" },
+      ],
+      total: "$614.82",
+      perSeat: "$307",
+      perSeatNum: 307,
+      pricingMode: "model_price",
+      modelPrice: "$348",             // model adds modest premium for round-trip convenience
+      modelPriceNum: 348,
+    },
+    params: { price: 348, flight_hrs: 1.2, lead_days: 5, num_pax: 2, is_round_trip: 1 }
+  },
+  {
+    // Scenario 4: Adaptive — base is cost-recovery; JS may raise or lower the model price
+    id: 4,
+    title: "Detroit to Cincinnati",
+    subtitle: "Same-day booking — 3 passengers, short notice, afternoon departure.",
+    tags: { Distance: "175 nm", Duration: "1.4 hrs", Passengers: "3", Departure: "Today 4:00 PM", Type: "One-way" },
+    costs: {
+      rows: [
+        { label: "Aircraft (1.12 tach hrs × $115)", value: "$128.80" },
+        { label: "Fuel — 25.8 gal at $7.10/gal",   value: "$183.18" },
+        { label: "Reserve fuel (45 min VFR)",        value: "$53.25"  },
+      ],
+      total: "$365.23",
+      perSeat: "$122",
+      perSeatNum: 122,
+      pricingMode: "model_price",
+      modelPrice: "$158",             // model adds same-day premium
+      modelPriceNum: 158,
+    },
+    params: { price: 158, flight_hrs: 1.4, lead_days: 0, num_pax: 3, is_round_trip: 0 }
+  }
+];
+
+// Questions template — adapts based on whether scenario uses cost-recovery or model-generated pricing
+function buildQuestions(scenario) {
+  const c        = scenario.costs;
+  const perSeat  = c.perSeat;
+  const total    = c.total;
+  const isModel  = c.pricingMode === "model_price";
+  const quoted   = isModel ? c.modelPrice   : c.perSeat;
+  const quotedN  = isModel ? c.modelPriceNum : c.perSeatNum;
+
+  // Q3 and Q5 reference the price the participant is actually being "quoted"
+  // For cost-recovery scenarios: that's the per-seat cost ($102)
+  // For model-price scenarios: that's the model-suggested price ($565, $348, $158)
+  const q3PriceLabel = isModel
+    ? `<strong>${quoted} per seat</strong> — the price suggested by the pricing model (operating cost is ${perSeat}/seat)`
+    : `<strong>${perSeat} per seat</strong> — exactly cost recovery with zero profit`;
+
+  const q5PriceLabel = isModel
+    ? `<strong>${quoted} per seat</strong>`
+    : `<strong>${perSeat} per seat</strong>`;
+
+  // Q4 premium definition — what "convenience and availability premium" actually means here:
+  // This is a small-aircraft charter flight. No airline check-in, no TSA, no shared cabin.
+  // The pilot shows up specifically for you, the schedule is yours, and the plane goes direct.
+  // No snacks, meals, or in-flight service are included — this is purely about the flexibility
+  // and availability of having a private aircraft on your timetable.
+  const q4PremiumDefinition = `
+    <div style="background:var(--paper);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:0.83rem;line-height:1.6;color:var(--ink-soft);">
+      <strong style="color:var(--ink);display:block;margin-bottom:4px;">What "convenience and availability premium" means here:</strong>
+      This is a <em>private charter flight</em> on a small aircraft — no airline check-in lines, no TSA screening, no shared cabin with strangers, and no fixed schedule. The pilot flies specifically for your group, door-to-door on your timeline. <strong>No food, drinks, or in-flight service are included.</strong> The premium is purely for the flexibility of private, on-demand aviation vs. commercial travel.
+    </div>`;
+
+  return [
+    {
+      id: "fair_price",
+      type: "dollar_input",
+      qnum: "Q1",
+      text: `The total operating cost for this flight is ${total} (${perSeat} per seat). What price per seat do you personally think is <em>fair</em> for the pilot to charge?`,
+      hint: "Consider the pilot's time, aircraft wear, fuel, and your sense of reasonable compensation — not just cost recovery.",
+      min: 0, max: 2000
+    },
+    {
+      id: "accept_price",
+      type: "dollar_input",
+      qnum: "Q2",
+      text: `What is the maximum price per seat you would pay for this flight if you needed to make this trip?`,
+      hint: "Go with whatever number feels right to you — there's no wrong answer here.",
+      min: 0, max: 2000
+    },
+    {
+      id: "sensitivity",
+      type: "radio",
+      qnum: "Q3",
+      text: `The pilot quotes you ${q3PriceLabel}. How do you feel about that price?`,
+      options: [
+        { value: 1, label: "Too expensive — I would not pay this" },
+        { value: 2, label: "A bit high — I'd hesitate but might consider it" },
+        { value: 3, label: "About right — seems fair given the context" },
+        { value: 4, label: "Good deal — I'd accept this immediately" },
+        { value: 5, label: "Surprisingly affordable — I expected more" },
+      ]
+    },
+    {
+      id: "premium_tolerance",
+      type: "slider",
+      qnum: "Q4",
+      text: `On top of the exact operating cost of ${perSeat}/seat, how much of a <em>convenience and availability premium</em> per seat feels reasonable for this kind of flight?`,
+      hint: `Slide to the dollar amount above cost you'd still be comfortable paying.`,
+      extraHTML: q4PremiumDefinition,
+      min: 0, max: 250, step: 5, unit: "$", defaultVal: 25
+    },
+    {
+      id: "willingness",
+      type: "radio",
+      qnum: "Q5",
+      text: `Thinking about this scenario holistically — if someone offered you this flight at ${q5PriceLabel}, what would you do?`,
+      options: [
+        { value: 1, label: "Definitely decline — too expensive" },
+        { value: 2, label: "Probably decline — not worth it to me" },
+        { value: 3, label: "Unsure — depends on the circumstances" },
+        { value: 4, label: "Probably accept — seems reasonable" },
+        { value: 5, label: "Definitely accept — great value" },
+      ]
+    }
+  ];
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════════════════
+let currentScenario = 0;
+let responses = [];
+let scenarios = JSON.parse(JSON.stringify(BASE_SCENARIOS)); // deep copy
+
+// Adaptive adjustment: after scenario 2, tweak scenario 4's model-generated price
+// based on whether the participant skews price-sensitive or price-generous
+function applyAdaptation() {
+  if (responses.length < 2) return;
+
+  const avgAcceptPrice = responses.reduce((s,r) => s + (r.accept_price || 0), 0) / responses.length;
+  const avgWillingness = responses.reduce((s,r) => s + (r.willingness  || 3), 0) / responses.length;
+  const avgPremium     = responses.reduce((s,r) => s + (r.premium_tolerance || 25), 0) / responses.length;
+
+  const priceSensitive = avgWillingness < 3.0 || avgPremium < 15;
+  const priceGenerous  = avgWillingness > 3.8 || avgPremium > 60;
+
+  if (priceSensitive) {
+    // Drop the model price toward cost-recovery to find lower acceptance boundary
+    scenarios[3].costs.modelPrice    = "$128";
+    scenarios[3].costs.modelPriceNum = 128;
+    scenarios[3].params.price        = 128;
+    scenarios[3].subtitle = "Same-day booking — 3 passengers, short notice. The model priced this conservatively today.";
+  } else if (priceGenerous) {
+    // Raise the model price to probe upper tolerance boundary
+    scenarios[3].costs.modelPrice    = "$195";
+    scenarios[3].costs.modelPriceNum = 195;
+    scenarios[3].params.price        = 195;
+    scenarios[3].subtitle = "Same-day booking — 3 passengers, short notice. The model applied a strong same-day premium.";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RENDERING
+// ══════════════════════════════════════════════════════════════════════════════
+function renderScenario(idx) {
+  const sc  = scenarios[idx];
+  const qs  = buildQuestions(sc);
+  const div = document.getElementById('screen-scenario');
+
+  const tagsHTML = Object.entries(sc.tags)
+    .map(([k,v]) => `<div class="tag"><strong>${k}:</strong> ${v}</div>`)
+    .join('');
+
+  const costRowsHTML = sc.costs.rows
+    .map(r => `<div class="cost-row"><span class="label">${r.label}</span><span class="value">${r.value}</span></div>`)
+    .join('');
+
+  let questionsHTML = qs.map((q, qi) => renderQuestion(q, qi)).join('');
+
+  div.innerHTML = `
+    <div class="scenario-header">
+      <div class="scenario-badge">✈ SCENARIO ${sc.id} OF ${scenarios.length}</div>
+      <div class="scenario-title">${sc.title}</div>
+      <div class="scenario-subtitle">${sc.subtitle}</div>
+    </div>
+
+    <div class="context-tags">${tagsHTML}</div>
+
+    <div class="cost-panel">
+      <h3>Operating Cost Breakdown — Full Transparency</h3>
+      ${costRowsHTML}
+      <div class="cost-total">
+        <span class="label">Total operating cost</span>
+        <span class="value">${sc.costs.total}</span>
+      </div>
+    </div>
+
+    ${sc.costs.pricingMode === 'model_price' ? `
+    <div style="background:#fff;border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:14px 18px;margin-bottom:26px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--mono);font-size:0.70rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);margin-bottom:3px;">Pricing model suggestion</div>
+        <div style="font-size:0.85rem;color:var(--ink-soft);line-height:1.5;">The dynamic pricing model generated a quoted price for this scenario based on flight duration, lead time, passenger count, and demand patterns.</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:1.5rem;font-weight:500;color:var(--ink);white-space:nowrap;">${sc.costs.modelPrice}<span style="font-size:0.75rem;color:var(--ink-soft);"> / seat</span></div>
+    </div>` : `
+    <div style="background:#fff;border:1px solid var(--border);border-left:3px solid var(--horizon);border-radius:var(--radius);padding:14px 18px;margin-bottom:26px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-family:var(--mono);font-size:0.70rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--horizon);margin-bottom:3px;">Cost recovery only</div>
+        <div style="font-size:0.85rem;color:var(--ink-soft);line-height:1.5;">In this scenario, the quoted price is simply the per-seat share of the total operating cost — no profit margin added.</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:1.5rem;font-weight:500;color:var(--ink);white-space:nowrap;">${sc.costs.perSeat}<span style="font-size:0.75rem;color:var(--ink-soft);"> / seat</span></div>
+    </div>`}
+
+    ${questionsHTML}
+
+    <div class="nav-row">
+      <button class="btn btn-ghost" onclick="goBack()" ${idx === 0 ? 'style="visibility:hidden"' : ''}>← Back</button>
+      <button class="btn btn-primary" onclick="nextScenario(${idx})">
+        ${idx < scenarios.length - 1 ? 'Next scenario →' : 'Finish & export →'}
+      </button>
+    </div>
+  `;
+
+  // Attach slider live-update listeners
+  div.querySelectorAll('input[type="range"]').forEach(slider => {
+    const valEl = document.getElementById(`sliderval-${slider.dataset.qid}`);
+    slider.addEventListener('input', () => {
+      valEl.textContent = `$${slider.value}`;
+    });
+  });
+
+  // Attach radio selection highlight
+  div.querySelectorAll('.radio-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const name = opt.querySelector('input').name;
+      div.querySelectorAll(`input[name="${name}"]`).forEach(r => {
+        r.closest('.radio-option').classList.remove('selected');
+      });
+      opt.querySelector('input').checked = true;
+      opt.classList.add('selected');
+    });
+  });
+}
+
+function renderQuestion(q, qi) {
+  let inputHTML = '';
+
+  if (q.type === 'dollar_input') {
+    inputHTML = `
+      <div class="input-prefix">
+        <span class="prefix-sym">$</span>
+        <input type="number" id="q-${q.id}" name="${q.id}" min="${q.min}" max="${q.max}" placeholder="0" step="1">
+      </div>
+      <div class="val-error" id="err-${q.id}">Please enter a dollar amount.</div>
+    `;
+  } else if (q.type === 'radio') {
+    const opts = q.options.map(o => `
+      <label class="radio-option">
+        <input type="radio" name="${q.id}" value="${o.value}">
+        <span class="radio-dot"></span>
+        <span>${o.label}</span>
+      </label>
+    `).join('');
+    inputHTML = `
+      <div class="radio-group">${opts}</div>
+      <div class="val-error" id="err-${q.id}">Please select an option.</div>
+    `;
+  } else if (q.type === 'slider') {
+    inputHTML = `
+      ${q.extraHTML || ''}
+      <div class="slider-wrap">
+        <div class="slider-row">
+          <input type="range" id="q-${q.id}" data-qid="${q.id}" min="${q.min}" max="${q.max}" step="${q.step}" value="${q.defaultVal}">
+          <span class="slider-value" id="sliderval-${q.id}">$${q.defaultVal}</span>
+        </div>
+        <div class="slider-labels"><span>$${q.min}</span><span>$${q.max}</span></div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="question-block" style="animation-delay:${qi * 0.06}s">
+      <div class="q-number">${q.qnum} of 5</div>
+      <div class="q-text">${q.text}</div>
+      ${q.hint ? `<div class="q-hint">${q.hint}</div>` : ''}
+      ${inputHTML}
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════════════════════
+function startSurvey() {
+  showScreen('screen-scenario');
+  renderScenario(0);
+  updateProgress();
+}
+
+function nextScenario(idx) {
+  const sc = scenarios[idx];
+  const qs = buildQuestions(sc);
+
+  // Validate
+  let valid = true;
+  const record = { scenario_id: sc.id, ...sc.params };
+
+  qs.forEach(q => {
+    if (q.type === 'dollar_input') {
+      const el = document.getElementById(`q-${q.id}`);
+      const errEl = document.getElementById(`err-${q.id}`);
+      if (!el.value || isNaN(parseFloat(el.value))) {
+        errEl.classList.add('visible');
+        valid = false;
+      } else {
+        errEl.classList.remove('visible');
+        record[q.id] = parseFloat(el.value);
+      }
+    } else if (q.type === 'radio') {
+      const checked = document.querySelector(`input[name="${q.id}"]:checked`);
+      const errEl   = document.getElementById(`err-${q.id}`);
+      if (!checked) {
+        errEl.classList.add('visible');
+        valid = false;
+      } else {
+        errEl.classList.remove('visible');
+        record[q.id] = parseInt(checked.value);
+      }
+    } else if (q.type === 'slider') {
+      const el = document.getElementById(`q-${q.id}`);
+      record[q.id] = parseInt(el.value);
+    }
+  });
+
+  if (!valid) {
+    document.querySelector('.question-block .val-error.visible')
+      ?.closest('.question-block')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  // Compute synthetic accept signal: willingness >= 4 = accept, < 3 = deny
+  record.synthetic_accept = record.willingness >= 4 ? 1 : (record.willingness <= 2 ? 0 : null);
+  responses.push(record);
+
+  if (idx === 1) applyAdaptation(); // adaptive adjustment after scenario 2
+
+  if (idx < scenarios.length - 1) {
+    currentScenario = idx + 1;
+    renderScenario(currentScenario);
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    showScreen('screen-thankyou');
+    updateProgress(true);
+    renderCoeffPreview();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function goBack() {
+  if (currentScenario > 0) {
+    responses.pop();
+    currentScenario--;
+    renderScenario(currentScenario);
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function updateProgress(done = false) {
+  const fill  = document.getElementById('progressFill');
+  const label = document.getElementById('progressLabel');
+  if (done) {
+    fill.style.width = '100%';
+    label.textContent = 'Complete ✓';
+  } else {
+    const pct = Math.round((currentScenario / scenarios.length) * 100);
+    fill.style.width = pct + '%';
+    label.textContent = `Scenario ${currentScenario + 1} of ${scenarios.length}`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COEFFICIENT DERIVATION
+// Estimate beta signal directions from aggregated responses.
+// These are heuristic signals, not fitted betas — the researcher aggregates
+// many participants' data to run actual SGD.
+// ══════════════════════════════════════════════════════════════════════════════
+function deriveCoeffSignals() {
+  if (responses.length === 0) return {};
+
+  const n = responses.length;
+
+  // beta_price: derived from (accept_price - cost_per_seat) / cost_per_seat
+  // Negative if people accept below cost, positive if well above
+  const priceRatios = responses.map(r => {
+    const pct = (r.accept_price - r.price) / Math.max(r.price, 1);
+    return pct;
+  });
+  const avgPriceRatio = priceRatios.reduce((a,b) => a+b, 0) / n;
+  const betaPrice = parseFloat((-0.005 - avgPriceRatio * 0.003).toFixed(5));
+
+  // beta_flight_hrs: from premium_tolerance — shorter flights get less tolerance per dollar
+  const avgPremium = responses.reduce((s,r) => s + (r.premium_tolerance||0), 0) / n;
+  const betaFlight = parseFloat((-0.05 - (avgPremium < 20 ? 0.03 : -0.01)).toFixed(4));
+
+  // beta_lead_days: from lead_days correlation with willingness
+  const leadWill = responses.map(r => ({
+    lead: r.lead_days, will: r.willingness
+  }));
+  const avgLeadWill = leadWill.reduce((s,r) => s + r.lead * r.will, 0) / n;
+  const betaLead = parseFloat((avgLeadWill > 15 ? 0.008 : 0.003).toFixed(4));
+
+  // beta_num_pax: from single vs group scenarios
+  const singlePax  = responses.filter(r => r.num_pax === 1);
+  const multiPax   = responses.filter(r => r.num_pax > 1);
+  let betaPax = -0.05;
+  if (singlePax.length && multiPax.length) {
+    const singleWill = singlePax.reduce((s,r) => s + r.willingness, 0) / singlePax.length;
+    const multiWill  = multiPax .reduce((s,r) => s + r.willingness, 0) / multiPax .length;
+    betaPax = parseFloat((-(singleWill - multiWill) * 0.015 - 0.04).toFixed(4));
+  }
+
+  // beta_round_trip
+  const rtScenarios = responses.filter(r => r.is_round_trip === 1);
+  const owScenarios = responses.filter(r => r.is_round_trip === 0);
+  let betaRT = 0.10;
+  if (rtScenarios.length && owScenarios.length) {
+    const rtWill = rtScenarios.reduce((s,r) => s + r.willingness, 0) / rtScenarios.length;
+    const owWill = owScenarios .reduce((s,r) => s + r.willingness, 0) / owScenarios .length;
+    betaRT = parseFloat(((rtWill - owWill) * 0.04 + 0.05).toFixed(4));
+  }
+
+  // Intercept: from overall willingness bias
+  const avgWill = responses.reduce((s,r) => s + r.willingness, 0) / n;
+  const betaIntercept = parseFloat((1.5 + (avgWill - 3) * 0.4).toFixed(3));
+
+  return {
+    "β₀  intercept":      betaIntercept,
+    "β₁  price_per_pax":  betaPrice,
+    "β₂  flight_hours":   betaFlight,
+    "β₃  lead_days":      betaLead,
+    "β₄  num_pax":        betaPax,
+    "β₅  is_round_trip":  betaRT,
+  };
+}
+
+function renderCoeffPreview() {
+  const signals = deriveCoeffSignals();
+  const el = document.getElementById('coeffPreview');
+  el.innerHTML = Object.entries(signals).map(([k,v]) => `
+    <div class="coeff-row">
+      <span class="name">${k}</span>
+      <span class="val">${v > 0 ? '+' : ''}${v}</span>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════════════════════════════════════
+function downloadJSON() {
+  const signals = deriveCoeffSignals();
+  const payload = {
+    meta: {
+      tool:      "Flight Pricing Engine — Beta Coefficient Survey",
+      version:   "1.0",
+      timestamp: new Date().toISOString(),
+      num_scenarios_completed: responses.length,
+    },
+    raw_responses: responses,
+    derived_coefficient_signals: signals,
+    notes: [
+      "raw_responses: one object per scenario with all 5 question answers",
+      "derived_coefficient_signals: heuristic directional estimates from this single participant",
+      "Aggregate many participants and run SGD to obtain fitted betas",
+      "synthetic_accept: 1=accept, 0=deny, null=ambiguous (use as y label for logistic regression)"
+    ]
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `flight_pricing_survey_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
