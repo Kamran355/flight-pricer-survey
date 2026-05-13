@@ -643,14 +643,10 @@
         <div id="coeffPreview"></div>
       </div>
 
-      <button class="btn btn-success" style="margin-top:8px;" onclick="downloadJSON()">⬇ Download my response file</button>
-      <a  
-        href="mailto:kamransohrab3@gmail.com"
-        class="btn btn-sky"
-        style="display:inline-block; margin-top:10px; text-decoration:none;"
-      >
-        Email my response to Kamran
-      </a>
+      <button class="btn btn-success" style="margin-top:8px;" onclick="downloadJSON()">
+        Submit my responses
+      </button>
+      <p id="submit-status" style="margin-top:12px; font-size:0.88rem; color:var(--ink-soft);"></p>
     </div>
   </div>
 
@@ -1175,7 +1171,7 @@ function renderCoeffPreview() {
 // ══════════════════════════════════════════════════════════════════════════════
 // EXPORT
 // ══════════════════════════════════════════════════════════════════════════════
-function downloadJSON() {
+async function downloadJSON() {
   const signals = deriveCoeffSignals();
   const payload = {
     meta: {
@@ -1193,6 +1189,26 @@ function downloadJSON() {
       "synthetic_accept: 1=accept, 0=deny, null=ambiguous (use as y label for logistic regression)"
     ]
   };
+
+  // ── Submit to Formspree ──────────────────────────────────────
+  try {
+    const res = await fetch("https://formspree.io/f/3000475145778232703", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify(payload),
+    });
+    if (res.ok) {
+      document.getElementById("submit-status").textContent =
+        "✅ Response submitted successfully — thank you!";
+    } else {
+      document.getElementById("submit-status").textContent =
+        "⚠️ Submission failed. Please try again.";
+    }
+  } catch (e) {
+    document.getElementById("submit-status").textContent =
+        "⚠️ Network error. Please check your connection.";
+  }
+}
 
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
