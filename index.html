@@ -615,7 +615,7 @@
         <div class="info-pill"><strong>Your data</strong>Anonymous JSON export</div>
       </div>
 
-      <p style="font-size:0.82rem; color:var(--ink-soft);">At the end, you'll download a small JSON file and send it to me directly. No account, no sign-up needed.</p>
+      <p style="font-size:0.82rem; color:var(--ink-soft);">At the end, you can view your contributions to my research before submitting!</p>
     </div>
 
     <div class="nav-row" style="justify-content:flex-end;">
@@ -924,7 +924,7 @@ function renderScenario(idx) {
     <div class="nav-row">
       <button class="btn btn-ghost" onclick="goBack()" ${idx === 0 ? 'style="visibility:hidden"' : ''}>← Back</button>
       <button class="btn btn-primary" onclick="nextScenario(${idx})">
-        ${idx < scenarios.length - 1 ? 'Next scenario →' : 'Finish & export →'}
+        ${idx < scenarios.length - 1 ? 'Next scenario →' : 'Review & Submit →'}
       </button>
     </div>
   `;
